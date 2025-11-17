@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build with GCC",
+      "type": "shell",
+      "command": "C:/msys64/mingw64/bin/g++.exe",
+      "args": [
+        "-std=c++17",
+        "-Wall",
+        "-Wextra",
+
+
+        // OPTIMIZATION FLAGS
+
+        "-O3",
+        "-march=native",
+        "-mtune=native",
+        "-flto",
+        "-DNDEBUG",
+
+
+        // FORCE AVX2 / BMI / BMI2 -- may be needed later
+
+        "-mavx2",
+        "-mbmi",
+        "-mbmi2",
+
+        "src/main.cpp",
+        "src/move_provider.cpp",
+        "src/game_loop.cpp",
+        "src/evaluation.cpp",
+        "src/uci_interface.cpp",
+
+        "-I", "${workspaceFolder}/include",
+        "-I", "${workspaceFolder}/chess-library-master/include",
+
+        "-o", "main.exe"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"],
+      "detail": "Build using MinGW-w64 GCC (AVX2 Optimized)"
+    }
+  ]
+}
