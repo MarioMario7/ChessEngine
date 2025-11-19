@@ -5,15 +5,12 @@
 #include <chrono>
 #include "../chess-library-master/include/chess.hpp"
 #include "../include/game_loop.hpp"
-#include "../include/uci_interface.hpp"   // included for optional UCI mode
+#include "../include/uci_interface.hpp" 
 #include "../include/move_provider.hpp" // remove after tests
 
 using namespace chessengine;
 
 
-// ----------------------------
-// ADD THIS PERFT FUNCTION
-// ----------------------------
 uint64_t perft(chess::Board& board, int depth) {
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board);
@@ -92,14 +89,9 @@ int main() {
 
    // std::cout << "Initial FEN: " << board.getFen() << "\n\n";
  
-   //  playGame(board);
+     //playGame(board);
 
 
-
-
-    // ---------------------------------------------------------
-    // ADDED: RUN PERFT BENCHMARK HERE 
-    // ---------------------------------------------------------
 
     // benchmarkPerft(
     //     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",

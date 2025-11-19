@@ -6,7 +6,11 @@
 
 
 
+int move_counter = 0;
+int extra_moves = 0;
 
+int q_depth = 0;        // current quiescence recursion depth
+int q_max_depth = 0;    // deepest quiescence level reached
 
 namespace chessengine {
     using namespace chess;
@@ -17,39 +21,97 @@ namespace chessengine {
         Move bestMove;
     };
 
-    SearchResult negaMax(int depth, Board& board, int color)
+
+        int quiesce(int alpha, int beta, Board& board, int color)
+    {
+        q_depth++;
+        if (q_depth > q_max_depth)
+            q_max_depth = q_depth;
+
+        int stand_pat = color * evaluatePosition(board);
+
+        if (stand_pat >= beta) {
+            q_depth--;
+            return stand_pat;
+        }
+
+        if (stand_pat > alpha)
+            alpha = stand_pat;
+
+        Movelist moves;
+        movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board);
+
+        if (moves.empty()) {
+            q_depth--;
+            return stand_pat;
+        }
+
+        for (Move move : moves)
+        {
+            board.makeMove(move);
+            int score = -quiesce(-beta, -alpha, board, -color);
+            board.unmakeMove(move);
+
+            if (score >= beta) {
+                q_depth--;
+                return score;
+            }
+
+            if (score > alpha)
+                alpha = score;
+        }
+
+        q_depth--;
+        return alpha;
+    }
+
+
+
+
+    SearchResult negaMax(int depth, int alpha, int beta, Board& board, int color)
     {
         if (depth == 0)
-            return { color * evaluatePosition(board), Move() };
+        {   
+            int qscore = quiesce(alpha, beta, board, color);
+            return { qscore, Move() };
+        }
 
         Movelist moves;
         movegen::legalmoves<movegen::MoveGenType::ALL>(moves, board);
 
-        // if no moves: this side lost/stalemate possibly
+        // No legal moves → checkmate or stalemate
         if (moves.empty())
-            return { -1000000, Move() };
+        {
+            int eval = color * evaluatePosition(board);
+            return { eval, Move() };
+        }
 
         SearchResult best = { -10000000, Move() };
 
         for (Move move : moves)
         {
+            move_counter++;
+
             board.makeMove(move);
 
-            // get opponent s response (we need to invert the evaluation because the color is switched )
-            SearchResult child = negaMax(depth - 1, board, -color);
+            SearchResult child = negaMax(depth - 1, -beta, -alpha, board, -color);
 
             board.unmakeMove(move);
 
             int score = -child.score;
 
-            // in this verison, we only calculate the material so it will only be true for the first move checked
-            // when we only check quiet moves or starting positions
-            
+            // Beta cutoff (fail-soft)
+            if (score >= beta)
+                return { score, move };
+
             if (score > best.score)
             {
                 best.score = score;
                 best.bestMove = move;
             }
+
+            if (score > alpha)
+                alpha = score;
         }
 
         return best;
@@ -60,12 +122,27 @@ namespace chessengine {
 
 
 
-    Move findBestMove( int depth, Board& board)
+
+    Move findBestMove(int depth, Board& board)
     {
         int color = (board.sideToMove() == Color::WHITE ? +1 : -1);
-        SearchResult result = negaMax(depth, board, color);
+
+        move_counter = 0;
+        extra_moves = 0;
+        q_depth = 0;
+        q_max_depth = 0;
+
+        int alpha = -10000000;
+        int beta  = +10000000;
+
+        SearchResult result = negaMax(depth, alpha, beta, board, color);
+
+        std::cout << "We have searched " << move_counter << " positions\n";
+        std::cout << "Max Quiescence Depth: " << q_max_depth << "\n";
+
         return result.bestMove;
     }
+
 
     Move getNextMove(Board& board)
     {

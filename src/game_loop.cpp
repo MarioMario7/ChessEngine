@@ -14,6 +14,8 @@ namespace chessengine {
 
             board.makeMove(move);
 
+            std::cout <<  "Move is " << uci::moveToUci(move) << std::endl;
+
             auto [reason, result] = board.isGameOver();
             if (reason != GameResultReason::NONE) {
                 std::cout << "Game over!\n";
