@@ -74,11 +74,20 @@ namespace chessengine {
 
         int quiesce(int alpha, int beta, Board& board, int color)
         {
+
+            
             q_depth++;
             if (q_depth > q_max_depth)
                 q_max_depth = q_depth;
 
             int stand_pat = color * evaluatePosition(board); // evaluation of the current position, without making any captures
+
+            // WILL BE REMOVED IN FAVOUR OF EXTRA PRUNING AND STATIC EXCHANGE EVAL
+            if (q_depth > 12) 
+            {
+                q_depth--;
+                return stand_pat;
+            }
 
             if (stand_pat >= beta) 
             {
@@ -90,7 +99,7 @@ namespace chessengine {
                 alpha = stand_pat;
 
             Movelist rawMoves;
-            movegen::legalmoves<movegen::MoveGenType::CAPTURE>(rawMoves, board);
+            movegen::legalmoves<movegen::MoveGenType::ALL>(rawMoves, board);
 
             if (rawMoves.empty()) 
             {
@@ -104,13 +113,24 @@ namespace chessengine {
 
             for (Move m : rawMoves)
             {
-                if (m.typeOf() == Move::CASTLING)  // avoid fake castle captures -- castling is king "captures" rook
+                int score = 0;
+
+                if (board.isCapture(m) && m.typeOf() != Move::CASTLING) // avoid fake castle captures -- castling is king "captures" rook
                 {
-                    continue;
+                    score = MVVLVA(board, m);
                 }
 
-                int s = MVVLVA(board, m);
-                scored[count++] = { s, m };
+                board.makeMove(m);
+                if (board.inCheck())
+                {
+                    score += 800; // arbitraty value chosen for checks -- almost a full pawn
+                }
+                board.unmakeMove(m);
+
+                if (score > 0) // if it's a capture or check then evaluate further
+                {
+                    scored[count++] = { score, m };
+                }
             }
 
             if (count == 0) 
@@ -344,8 +364,6 @@ namespace chessengine {
 
 
             Move best = findBestMove(8, board);
-
-        // std::cout << "Best move (depth 3): " << uci::moveToUci(best) << "\n";
 
             return best;
         }

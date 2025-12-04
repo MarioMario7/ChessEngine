@@ -20,7 +20,8 @@ namespace chessengine {
             std::cout <<  "Move is " << uci::moveToUci(move) << std::endl;
 
             auto [reason, result] = board.isGameOver();
-            if (reason != GameResultReason::NONE) {
+            if (reason != GameResultReason::NONE) 
+            {
                 std::cout << "Game over!\n";
 
                 switch (reason) {
@@ -35,10 +36,24 @@ namespace chessengine {
                 // this is possibly incorrect for now
 
                 std::cout << "Result: ";
-                if (result == GameResult::WIN) std::cout << "Black wins\n";
-                else if (result == GameResult::LOSE) std::cout << "White wins\n";
-                else if (result == GameResult::DRAW) std::cout << "Draw\n";
 
+                if (reason ==  GameResultReason::CHECKMATE)
+                {
+                    if (board.sideToMove() == Color::WHITE)
+                    {
+                        std::cout << "Black wins\n";
+                    }
+                    else if (board.sideToMove() == Color::BLACK)
+                    {
+                        std::cout << "White wins\n";
+                    }
+
+                    else if (result == GameResult::DRAW) 
+                    {
+                        std::cout << "Draw\n";
+                    }
+                }
+                
                 std::cout << "Final FEN: " << board.getFen() << "\n";
                 break;
             }
