@@ -92,7 +92,7 @@ namespace chessengine {
             
             q_depth++;
             if (q_depth > q_max_depth)
-                q_max_depth = q_depth;
+                q_max_depth = q_depth; // for debugging
 
             int stand_pat = color * evaluatePosition(board); // evaluation of the current position, without making any captures
 
@@ -137,11 +137,11 @@ namespace chessengine {
                 board.makeMove(m);
                 if (board.inCheck())
                 {
-                    score += 800; // arbitraty value chosen for checks -- almost a full pawn
+                    score += 800; // arbitrary value chosen for checks -- almost a full pawn
                 }
                 board.unmakeMove(m);
 
-                if (score > 0) // if it's a capture or check then evaluate further
+                if ((board.isCapture(m) && m.typeOf() != Move::CASTLING) || board.inCheck()) // if it's a capture or check then evaluate further
                 {
                     scored[count++] = { score, m };
                 }
