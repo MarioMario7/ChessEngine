@@ -12,6 +12,10 @@ int extra_moves = 0;
 int q_depth = 0;        // current quiescence recursion depth
 int q_max_depth = 0;    // deepest quiescence level reached
 
+const int CHECKMATE_SCORE = 999999;
+const int DRAW_SCORE = 0;
+
+
 
 // Victim/Attacker piece values for MVV-LVA 
 
@@ -22,6 +26,16 @@ static constexpr int MVV_LVA_VALUES[7] = {
     500,   // ROOK
     900,   // QUEEN
       0,   // KING
+      0    // NONE (no victim)
+};
+
+static constexpr int SEE_VALUES[7] = {
+    100,   // PAWN
+    300,   // KNIGHT
+    300,   // BISHOP
+    500,   // ROOK
+    900,   // QUEEN
+  20000,   // KING
       0    // NONE (no victim)
 };
 
@@ -37,7 +51,7 @@ static void init_mvv_lva()
     {
         for (int a = 0; a < 7; a++)
         {
-            MVV_LVA_TABLE[v][a] = MVV_LVA_VALUES[v] * 10 - MVV_LVA_VALUES[a];
+            MVV_LVA_TABLE[v][a] = MVV_LVA_VALUES[v] * 10 - MVV_LVA_VALUES[a]; // * by 10 to have bigger diff between capture scores
         }
     }
 }
@@ -51,7 +65,7 @@ namespace chessengine {
         int score;
         Move bestMove;
     };
-
+        
 
         int MVVLVA(Board& board, Move& move)
         {
@@ -82,7 +96,7 @@ namespace chessengine {
 
             int stand_pat = color * evaluatePosition(board); // evaluation of the current position, without making any captures
 
-            // WILL BE REMOVED IN FAVOUR OF EXTRA PRUNING AND STATIC EXCHANGE EVAL
+            // WILL BE REMOVED IN FAVOUR OF EXTRA PRUNING AND STATIC EXCHANGE EVAL -- stops at 12 depth
             if (q_depth > 12) 
             {
                 q_depth--;
@@ -199,13 +213,19 @@ namespace chessengine {
                 if (board.inCheck())
                 {
                     // depth added so engine prefers faster mates
-                    return { -999999 - depth, Move() };
+                    return { -CHECKMATE_SCORE - depth, Move() };
                 }
                 else
                 {
                     // Stalemate
-                    return { 0, Move() };
+                    return { DRAW_SCORE, Move() };
                 }
+            }
+
+            if (board.isGameOver().second == GameResult::DRAW) // second in the pair is the result, first is reason
+            {
+                // 3 move repetition/50 move rule/insufficeint material
+                return { DRAW_SCORE, Move() };
             }
 
             struct ScoredMove { int score; Move move; }; // faster than vectors
@@ -273,7 +293,13 @@ namespace chessengine {
 
         Move findBestMove(int depth, Board& board)
         {
-            int color = (board.sideToMove() == Color::WHITE ? +1 : -1);
+
+            int color = -1; // black to move
+            if (board.sideToMove() == Color::WHITE)
+            {
+                color = 1;
+            }
+            
 
             move_counter = 0;
             extra_moves = 0;
