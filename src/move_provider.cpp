@@ -72,12 +72,16 @@ namespace chessengine {
         {
             Bitboard attackers{};
 
+            // add non-sliding attackers to the target square
+            // we must add them for each color
             attackers |= attacks::pawn(Color::WHITE, sq) & board.pieces(PieceType::PAWN, Color::BLACK);
             attackers |= attacks::pawn(Color::BLACK, sq) & board.pieces(PieceType::PAWN, Color::WHITE);
 
             attackers |= attacks::knight(sq) & (board.pieces(PieceType::KNIGHT, Color::WHITE) | board.pieces(PieceType::KNIGHT, Color::BLACK));
 
             attackers |= attacks::king(sq) & (board.pieces(PieceType::KING, Color::WHITE) | board.pieces(PieceType::KING, Color::BLACK));
+
+            //sliding pieces 
 
             //diagonals
             const Bitboard bishops_queens =
@@ -99,9 +103,12 @@ namespace chessengine {
             return attackers;
         }
 
+
+        // returns a score of how good a capture is, based on the following exchanges that result from it
+        // is used for ordering
         int SEE(Board& board, Square& toSq, Square& fromSq, Piece& target)
         {
-
+            // gain is is used to track how the advantage/disaadvatae changes after each capture in the exchange
             int gain[32];
             int depth = 0;
 
@@ -109,50 +116,92 @@ namespace chessengine {
 
             gain[0] = SEE_VALUES[static_cast<int>(target.type())];
 
+            // from  square is removed from the occ board
             occupancy ^= Bitboard::fromSquare(fromSq);
 
-            Color side = (board.sideToMove() == Color::WHITE) ? Color::BLACK : Color::WHITE;
+            Color side;
+
+            // get enemy color (reverse)
+            if (board.sideToMove() == Color::WHITE)
+            {
+                side = Color::BLACK;
+            }
+            else
+            {
+                side = Color::WHITE;
+            }
+
 
             while (true)
             {
                 Bitboard att = attacksToSquare(board, toSq, occupancy);
 
                 Square from{};
-                PieceType pt = PieceType::NONE;
+                PieceType piece_type = PieceType::NONE;
                 bool found = false;
 
                 const PieceType order[] = {
+                    // piece worth in order , we try to capture with the least valuable piece first
                     PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP,
                     PieceType::ROOK, PieceType::QUEEN,  PieceType::KING
                 };
 
-                for (PieceType cand : order)
+                for (PieceType candidate : order)
                 {
-                    Bitboard bb = att & board.pieces(cand, side);
+                    Bitboard bb = att & board.pieces(candidate, side);
+
+                    // we must check if the bitboard stil has 1s(pieces) left (unchecked)
                     if (bb)
                     {
                         from = bb.pop();
-                        pt = cand;
+                        piece_type = candidate;
                         found = true;
                         break;
                     }
                 }
 
-                if (!found) break;
+                // no more pieces
+                if (!found) 
+                {
+                    break;
+                }
 
+                // add result of SEE from current capture to gain array
                 ++depth;
-                gain[depth] = SEE_VALUES[static_cast<int>(pt)] - gain[depth - 1];
+                gain[depth] = SEE_VALUES[static_cast<int>(piece_type)] - gain[depth - 1];
 
-                if (std::max(-gain[depth - 1], gain[depth]) < 0) break;
+                // if the best result until now is negative, there's no need to continue
+                // example: queen takes pawn, no need to further evaulate 
+                if (std::max(-gain[depth - 1], gain[depth]) < 0)
+                {
+                    break;
+                }
 
+                // removing the current attacker from the occupancy bitboard as we already proccesed it 
                 occupancy ^= Bitboard::fromSquare(from);
-                side = (side == Color::WHITE) ? Color::BLACK : Color::WHITE;
 
-                if (depth >= 30) break;
+                // get enemy color (reverse)
+                if (board.sideToMove() == Color::WHITE)
+                {
+                    side = Color::BLACK;
+                }
+                else
+                {
+                    side = Color::WHITE;
+                }
+
+                // should theoretically be impossible, but just in case, a failsafe was added to avoid any "explosions"
+                if (depth >= 30) 
+                {
+                    break;
+                }
+
             }
 
             while (depth)
             {
+                // we check gain for each capture and if continuing wiht capuring is not beneficial, we dont "do" the capture
+                // we compare with negative gain for prev move beacuse perpective flips
                 gain[depth - 1] = -std::max(-gain[depth - 1], gain[depth]);
                 --depth;
             }
@@ -230,7 +279,19 @@ namespace chessengine {
                     Piece victim = board.at(m.to());
                     if (m.typeOf() == Move::ENPASSANT)
                     {
-                        victim = Piece(PieceType::PAWN, (board.sideToMove() == Color::WHITE) ? Color::BLACK : Color::WHITE);
+
+                        Color victim_color;
+
+                        if (board.sideToMove() == Color::WHITE)
+                        {
+                            victim_color = Color::BLACK;
+                        }
+                        else
+                        {
+                            victim_color = Color::WHITE;
+                        }
+
+                        victim = Piece(PieceType::PAWN, victim_color);
                     }
 
 
@@ -350,7 +411,18 @@ namespace chessengine {
                     Piece victim = board.at(m.to());
                     if (m.typeOf() == Move::ENPASSANT)
                     {
-                        victim = Piece(PieceType::PAWN, (board.sideToMove() == Color::WHITE) ? Color::BLACK : Color::WHITE);
+                        Color victim_color;
+
+                        if (board.sideToMove() == Color::WHITE)
+                        {
+                            victim_color = Color::BLACK;
+                        }
+                        else
+                        {
+                            victim_color = Color::WHITE;
+                        }
+
+                        victim = Piece(PieceType::PAWN, victim_color);
                     }
 
                     Square to = m.to();
