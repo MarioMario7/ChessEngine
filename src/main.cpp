@@ -46,17 +46,17 @@ int main() {
     
     //           <<!!! To enable UCI conmmunciation , uncomment the runUciLoop command and comment out everything else !!!>>
 
-    chessengine::runUciLoop();
+    //chessengine::runUciLoop();
 
 
 
 
     // chess starting position
 
-    // Board board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    // board.setFen("3q2rk/1b1q1brr/1npqp1rr/3p2pp/1NP1P1PP/1B1Q1BRR/3Q2RR/3Q2RK w - - 0 1");
-    // std::cout << " FEN: " << board.getFen() << "\n\n";
-    // playGame(board);
+     Board board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+     board.setFen("1rkrrrrr/Q2prrrr/1rrrrrrr/1rrbrrrr/4rrrr/2b1rrrr/1r6/K7 w - - 24 12");
+     std::cout << " FEN: " << board.getFen() << "\n\n";
+     playGame(board);
 
     //Board board("4k3/8/4q3/4K3/8/8/8/8 w - - 0 1");
     //     std::cout << " FEN: " << board.getFen() << "\n\n";
