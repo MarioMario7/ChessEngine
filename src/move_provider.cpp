@@ -4,6 +4,7 @@
 #include <cctype>
 #include <iostream>
 #include <chrono>
+using U64 = std::uint64_t;
 
 
 
@@ -44,7 +45,6 @@ static int MVV_LVA_TABLE[7][7];
 
 
 
-
 // we do this once instead of multiplying these values every time we evaluate a move
 static void init_mvv_lva() 
 {
@@ -66,6 +66,70 @@ namespace chessengine {
         int score;
         Move bestMove;
     };
+
+
+     enum SCORE_TYPE {
+        EXACT,
+        LOWERBOUND, // fails high -- cut node
+        UPPERBOUND // fails low -- all nodes
+    };
+
+    struct TTEntry { // size of each entry is 24 bytes
+        U64 key = 0;       // zobrist key of the position
+        int depth = -1;    // search depth
+        int score = 0;     // eval
+        SCORE_TYPE bound;   // what kind of score this is
+    };    
+
+   
+
+
+    std::vector<TTEntry> TT(1 << 21);    // table is aprox 48MB(2 Million * 24bytes) -- may be subject to change
+    std::size_t mask = TT.size() - 1; // all 1s
+
+    
+
+    void store_position(const Board& board, int depth, int score, SCORE_TYPE bound)
+    {
+        U64 key = board.hash();
+        U64 index = key & mask; // this is done as the key is VERY big , but we only need the last 22 (mask size/entry size) bits 
+
+        TTEntry& entry = TT[index];
+
+        // we must replace the old value in case of a collison in the indexing of the table
+        // odds are 0.00005%, but this will be very common, since lots of values will be stored in the table 
+        // !!!!!!!!!a better implementation for this that considers the age of the entry will be added at a later date, instead replacing random values!!!!!!!!!!!!!!!
+
+        // hash collisons can also happen, but the odds are negligable (1 / 2^64) for a 64 bit key  
+
+        // we will also replace the same postion searched if its depth is higher that the old one (we have a deeper evaluation)
+        if (entry.key != key || entry.depth < depth) 
+        {
+            entry.key = key;
+            entry.depth = depth;
+            entry.score = score;
+            entry.bound = bound;
+        }
+
+    }
+
+    TTEntry* query_table(const Board& board)
+    {
+
+        U64 key = board.hash();
+        U64 index = key & mask;
+
+        TTEntry& entry = TT[index];
+
+        if (entry.key == key)
+        {
+            return &entry;
+        }
+
+        return nullptr;
+    }
+
+
         
 
         static Bitboard attacksToSquare(const Board& board, Square sq, Bitboard occupancy)
