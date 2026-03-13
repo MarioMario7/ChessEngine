@@ -18,6 +18,15 @@ const int CHECKMATE_SCORE = 999999;
 const int DRAW_SCORE = 0;
 
 
+long long tt_probes = 0;
+long long tt_hits = 0;
+long long tt_exact_hits = 0;
+long long tt_lower_hits = 0;
+long long tt_upper_hits = 0;
+long long tt_stores = 0;
+long long tt_cutoffs = 0;
+
+
 
 // Victim/Attacker piece values for MVV-LVA 
 
@@ -111,12 +120,15 @@ namespace chessengine {
             entry.score = score;
             entry.bound = bound;
             entry.bestMove = bestMove;
+            tt_stores++;
         }
 
     }
 
     TTEntry* query_table(const Board& board)
     {
+
+        tt_probes++;
 
         U64 key = board.hash();
         U64 index = key & mask;
@@ -125,6 +137,7 @@ namespace chessengine {
 
         if (entry.key == key)
         {
+            tt_hits++;
             return &entry;
         }
 
@@ -335,18 +348,23 @@ namespace chessengine {
                 {
                     if (entry->bound == EXACT)
                     {
+                        tt_exact_hits++;
                         q_depth--;
                         return entry->score;
                     }
 
                     if (entry->bound == LOWERBOUND && entry->score >= beta)
                     {
+                        tt_lower_hits++;
+                        tt_cutoffs++;
                         q_depth--;
                         return entry->score;
                     }
 
                     if (entry->bound == UPPERBOUND && entry->score <= alpha)
                     {
+                        tt_upper_hits++;
+                        tt_cutoffs++;
                         q_depth--;
                         return entry->score;
                     }
@@ -540,13 +558,24 @@ namespace chessengine {
                 if (entry->depth >= depth)
                 {
                     if (entry->bound == EXACT)
+                    {
+                        tt_exact_hits++;
                         return { entry->score, entry->bestMove };
+                    }
 
                     if (entry->bound == LOWERBOUND && entry->score >= beta)
+                    {
+                        tt_lower_hits++;
+                        tt_cutoffs++;
                         return { entry->score, entry->bestMove };
+                    }
 
                     if (entry->bound == UPPERBOUND && entry->score <= alpha)
+                    {
+                        tt_upper_hits++;
+                        tt_cutoffs++;
                         return { entry->score, entry->bestMove };
+                    }
                 }
             }
 
@@ -666,6 +695,14 @@ namespace chessengine {
             q_depth = 0;
             q_max_depth = 0;
 
+            tt_probes = 0;
+            tt_hits = 0;
+            tt_exact_hits = 0;
+            tt_lower_hits = 0;
+            tt_upper_hits = 0;
+            tt_stores = 0;
+            tt_cutoffs = 0;
+
             int alpha = -10000000;
             int beta  = +10000000;
 
@@ -727,6 +764,18 @@ namespace chessengine {
             std::cout << "Time: " << ms << " ms\n";
             std::cout << "NPS: " << (long long)nps << "\n"; 
             std::cout << "Max quiescence depth: " << q_max_depth << "\n";
+
+            double tt_hit_rate = tt_probes > 0 ? (100.0 * tt_hits / tt_probes) : 0.0;
+
+            std::cout << "TT probes: " << tt_probes << "\n";
+            std::cout << "TT hits: " << tt_hits << "\n";
+            std::cout << "TT hit rate: " << tt_hit_rate << "%\n";
+            std::cout << "TT exact hits: " << tt_exact_hits << "\n";
+            std::cout << "TT lower hits: " << tt_lower_hits << "\n";
+            std::cout << "TT upper hits: " << tt_upper_hits << "\n";
+            std::cout << "TT cutoffs: " << tt_cutoffs << "\n";
+            std::cout << "TT stores: " << tt_stores << "\n";
+
             std::cout << "==============================================\n\n";
 
             return result.bestMove;
