@@ -79,6 +79,7 @@ namespace chessengine {
         int depth = -1;    // search depth
         int score = 0;     // eval
         SCORE_TYPE bound;   // what kind of score this is
+        Move bestMove = Move(); // best move at this position
     };    
 
    
@@ -89,7 +90,7 @@ namespace chessengine {
 
     
 
-    void store_position(const Board& board, int depth, int score, SCORE_TYPE bound)
+    void store_position(const Board& board, int depth, int score, SCORE_TYPE bound, Move bestMove)
     {
         U64 key = board.hash();
         U64 index = key & mask; // this is done as the key is VERY big , but we only need the last 22 (mask size/entry size) bits 
@@ -109,6 +110,7 @@ namespace chessengine {
             entry.depth = depth;
             entry.score = score;
             entry.bound = bound;
+            entry.bestMove = bestMove;
         }
 
     }
@@ -300,6 +302,57 @@ namespace chessengine {
             if (q_depth > q_max_depth)
                 q_max_depth = q_depth; // for debugging
 
+            if (board.isGameOver().second == GameResult::DRAW) // second in the pair is the result, first is reason
+            {
+                // 3 move repetition/50 move rule/insufficeint material
+                q_depth--;
+                return DRAW_SCORE;
+            }
+
+            Movelist rawMoves;
+            movegen::legalmoves<movegen::MoveGenType::ALL>(rawMoves, board);
+
+            //checkmate or stalemate
+            if (rawMoves.empty()) 
+            {
+                if (board.inCheck())
+                {
+                    q_depth--;
+                    return -CHECKMATE_SCORE;
+                }
+                else
+                {
+                    q_depth--;
+                    return DRAW_SCORE; // fail soft
+                }
+            }
+
+            int originalAlpha = alpha;
+
+            if (TTEntry* entry = query_table(board))
+            {
+                if (entry->depth >= 0)
+                {
+                    if (entry->bound == EXACT)
+                    {
+                        q_depth--;
+                        return entry->score;
+                    }
+
+                    if (entry->bound == LOWERBOUND && entry->score >= beta)
+                    {
+                        q_depth--;
+                        return entry->score;
+                    }
+
+                    if (entry->bound == UPPERBOUND && entry->score <= alpha)
+                    {
+                        q_depth--;
+                        return entry->score;
+                    }
+                }
+            }
+
             int stand_pat = color * evaluatePosition(board); // evaluation of the current position, without making any captures
 
             // WILL BE REMOVED IN FAVOUR OF EXTRA PRUNING AND STATIC EXCHANGE EVAL -- stops at 12 depth
@@ -311,21 +364,13 @@ namespace chessengine {
 
             if (stand_pat >= beta) 
             {
+                store_position(board, 0, stand_pat, LOWERBOUND, Move());
                 q_depth--;
                 return stand_pat;
             }
 
             if (stand_pat > alpha)
                 alpha = stand_pat;
-
-            Movelist rawMoves;
-            movegen::legalmoves<movegen::MoveGenType::ALL>(rawMoves, board);
-
-            if (rawMoves.empty()) 
-            {
-                q_depth--;
-                return stand_pat; // fail soft
-            }
 
             struct ScoredMove { int score; Move move; };
             ScoredMove scored[256];
@@ -334,6 +379,7 @@ namespace chessengine {
             for (Move m : rawMoves)
             {
                 int score = 0;
+                bool givesCheck = false;
 
                 if (board.isCapture(m) && m.typeOf() != Move::CASTLING) // avoid fake castle captures -- castling is king "captures" rook
                 {
@@ -372,10 +418,11 @@ namespace chessengine {
                 if (board.inCheck())
                 {
                     score += 800; // arbitrary value chosen for checks -- almost a full pawn
+                    givesCheck = true;
                 }
                 board.unmakeMove(m);
 
-                if ((board.isCapture(m) && m.typeOf() != Move::CASTLING) || board.inCheck()) // if it's a capture or check then evaluate further
+                if ((board.isCapture(m) && m.typeOf() != Move::CASTLING) || givesCheck) // if it's a capture or check then evaluate further
                 {
                     scored[count++] = { score, m };
                 }
@@ -383,8 +430,16 @@ namespace chessengine {
 
             if (count == 0) 
             {
+                SCORE_TYPE bound_type;
+                if (alpha <= originalAlpha)
+                    bound_type = UPPERBOUND;
+                else
+                    bound_type = EXACT;
+
+                store_position(board, 0, alpha, bound_type, Move());
+
                 q_depth--;
-                return stand_pat;
+                return alpha;
             }
 
             // insertion sort (fastest for small lists -- faster than quicksor for example)
@@ -401,6 +456,8 @@ namespace chessengine {
                 scored[j + 1] = key;
             }
 
+            Move bestMove = Move();
+
             for (int i = 0; i < count; i++)
             {
                 Move move = scored[i].move;
@@ -411,13 +468,25 @@ namespace chessengine {
 
                 if (score >= beta) 
                 {
+                    store_position(board, 0, score, LOWERBOUND, move);
                     q_depth--;
                     return score;
                 }
 
                 if (score > alpha)
+                {
                     alpha = score;
+                    bestMove = move;
+                }
             }
+
+            SCORE_TYPE bound_type;
+            if (alpha <= originalAlpha)
+                bound_type = UPPERBOUND;
+            else
+                bound_type = EXACT;
+
+            store_position(board, 0, alpha, bound_type, bestMove);
 
             q_depth--;
             return alpha;
@@ -427,14 +496,15 @@ namespace chessengine {
 
 
 
-
         SearchResult negaMax(int depth, int alpha, int beta, Board& board, int color)
         {
 
-            if (depth == 0)
-            {   
-                int qscore = quiesce(alpha, beta, board, color);
-                return { qscore, Move() };
+            
+
+            if (board.isGameOver().second == GameResult::DRAW) // second in the pair is the result, first is reason
+            {
+                // 3 move repetition/50 move rule/insufficeint material
+                return { DRAW_SCORE, Move() };
             }
 
             Movelist rawMoves;
@@ -456,11 +526,31 @@ namespace chessengine {
                 }
             }
 
-            if (board.isGameOver().second == GameResult::DRAW) // second in the pair is the result, first is reason
-            {
-                // 3 move repetition/50 move rule/insufficeint material
-                return { DRAW_SCORE, Move() };
+            if (depth == 0)
+            {   
+                int qscore = quiesce(alpha, beta, board, color);
+                return { qscore, Move() };
             }
+
+         
+            int originalAlpha = alpha;
+
+            if (TTEntry* entry = query_table(board))
+            {
+                if (entry->depth >= depth)
+                {
+                    if (entry->bound == EXACT)
+                        return { entry->score, entry->bestMove };
+
+                    if (entry->bound == LOWERBOUND && entry->score >= beta)
+                        return { entry->score, entry->bestMove };
+
+                    if (entry->bound == UPPERBOUND && entry->score <= alpha)
+                        return { entry->score, entry->bestMove };
+                }
+            }
+
+
 
             struct ScoredMove { int score; Move move; }; // faster than vectors
             ScoredMove scored[256];
@@ -525,12 +615,7 @@ namespace chessengine {
                 SearchResult child = negaMax(depth - 1, -beta, -alpha, board, -color);
                 board.unmakeMove(move);
 
-
                 int score = -child.score;
-
-                // beta cutoff 
-                if (score >= beta)
-                    return { score, move };
 
                 if (score > best.score)
                 {
@@ -540,7 +625,21 @@ namespace chessengine {
 
                 if (score > alpha)
                     alpha = score;
+
+                if (alpha >= beta)
+                {
+                    store_position(board, depth, alpha, LOWERBOUND, move);
+                    return { alpha, move };
+                }
             }
+
+            SCORE_TYPE bound_type;
+            if (best.score <= originalAlpha)
+                bound_type = UPPERBOUND;
+            else
+                bound_type = EXACT;
+
+            store_position(board, depth, best.score, bound_type, best.bestMove);
 
             return best;
         }
