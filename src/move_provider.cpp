@@ -108,9 +108,9 @@ namespace chessengine {
 
         // we must replace the old value in case of a collison in the indexing of the table
         // odds are 0.00005%, but this will be very common, since lots of values will be stored in the table 
-        // !!!!!!!!!a better implementation for this that considers the age of the entry will be added at a later date, instead replacing random values!!!!!!!!!!!!!!!
+        // !!!!!!!!!a better implementation for this that considers the age of the entry will be added at a later date, instead of replacing random values!!!!!!!!!!!!!!!
 
-        // hash collisons can also happen, but the odds are negligable (1 / 2^64) for a 64 bit key  
+        // hash collisons can also happen, but the odds are negligible (1 / 2^64) for a 64 bit key  
 
         // we will also replace the same postion searched if its depth is higher that the old one (we have a deeper evaluation)
         if (entry.key != key || entry.depth < depth) 
@@ -187,7 +187,7 @@ namespace chessengine {
         // is used for ordering
         int SEE(Board& board, Square& toSq, Square& fromSq, Piece& target)
         {
-            // gain is is used to track how the advantage/disaadvatae changes after each capture in the exchange
+            // gain is used to track how the advantage/disadvantage changes after each capture in the exchange
             int gain[32];
             int depth = 0;
 
@@ -373,8 +373,8 @@ namespace chessengine {
 
             int stand_pat = color * evaluatePosition(board); // evaluation of the current position, without making any captures
 
-            // WILL BE REMOVED IN FAVOUR OF EXTRA PRUNING AND STATIC EXCHANGE EVAL -- stops at 12 depth
-            if (q_depth > 12) 
+            // failsafe
+            if (q_depth > 24) 
             {
                 q_depth--;
                 return stand_pat;
@@ -398,6 +398,7 @@ namespace chessengine {
             {
                 int score = 0;
                 bool givesCheck = false;
+                bool losingCapture = false;
 
                 if (board.isCapture(m) && m.typeOf() != Move::CASTLING) // avoid fake castle captures -- castling is king "captures" rook
                 {
@@ -430,6 +431,11 @@ namespace chessengine {
                     score = MVVLVA(board, m);
 
                     score += see;
+
+                    if (see < 0)
+                    {
+                        losingCapture = true;
+                    }
                 }
 
                 board.makeMove(m);
@@ -439,6 +445,13 @@ namespace chessengine {
                     givesCheck = true;
                 }
                 board.unmakeMove(m);
+
+
+                // skip losing captures if they do not give check
+                if (losingCapture && !givesCheck)
+                {
+                    continue;
+                }
 
                 if ((board.isCapture(m) && m.typeOf() != Move::CASTLING) || givesCheck) // if it's a capture or check then evaluate further
                 {
