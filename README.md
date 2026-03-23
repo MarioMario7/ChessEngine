@@ -1,27 +1,27 @@
 # ChessEnigne
 
 ## Search
-- [ ] Negamax
-- [ ] Alpha-beta pruning
+- [x] Negamax
+- [x] Alpha-beta pruning
 - [ ] Iterative deepening
 - [ ] Principal Variation Search (PVS)
 - [ ] Aspiration windows
-- [ ] Quiescence search
+- [x] Quiescence search
 
 ## Move ordering
-- [ ] Hash move
-- [ ] MVV-LVA
-- [ ] SEE
+- [x] Hash move
+- [x] MVV-LVA
+- [x] SEE
 - [ ] Killer heuristic
 - [ ] History heuristic
 - [ ] Countermove heuristic
 
 ## Transposition table
-- [ ] TT probing
-- [ ] TT storing
-- [ ] Exact / lower / upper bounds
+- [x] TT probing
+- [x] TT storing
+- [x] Exact / lower / upper bounds
 - [ ] Replacement policy
-- [ ] Hash move extraction
+- [x] Hash move extraction
 
 ## Pruning and reductions
 - [ ] Null move pruning
@@ -33,7 +33,6 @@
 - [ ] Singular extensions
 
 ## Evaluation
-- [ ] Classical eval
 - [ ] NNUE inference
 - [ ] NNUE accumulator updates
 - [ ] Phase / scaling logic
@@ -46,16 +45,19 @@
 - [ ] PV instability handling
 
 ## UCI / engine behavior
-- [ ] UCI loop
-- [ ] Position parsing
+- [x] UCI loop
+- [x] Position parsing
 - [ ] Go / stop handling
 - [ ] Search info output
 - [ ] Bench / debug commands
 
 ## Testing
-- [ ] Perft validation
-- [ ] TT correctness tests
+- [x] Perft validation
+- [x] TT correctness tests
+- [ ] TT hit rate tests
+- [ ] TT collision rate tests
 - [ ] SEE correctness tests
 - [ ] Search regression tests
 - [ ] Self-play testing
 - [ ] SPRT / Elo testing
+more tests to be added
