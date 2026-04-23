@@ -31,6 +31,7 @@
         "src/game_loop.cpp",
         "src/evaluation.cpp",
         "src/uci_interface.cpp",
+        "src/nnue/nnue_features.cpp",
 
         "-I", "${workspaceFolder}/include",
         "-I", "${workspaceFolder}/chess-library-master/include",
