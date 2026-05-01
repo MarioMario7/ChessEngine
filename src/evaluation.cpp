@@ -1,9 +1,11 @@
 #include "../include/evaluation.hpp"
+#include "../include/nnue_features.hpp"
 #include <iostream>
 
 namespace chessengine {
     using namespace chess;
 
+    bool flag = false; 
     // Piece values in centipawns
     static constexpr int pawn_value   = 100;
     static constexpr int bishop_value = 300;
@@ -13,6 +15,28 @@ namespace chessengine {
 
     int evaluatePosition(const Board& board)
     {
+        
+        if (flag == false)
+        {
+            Board board1("r1b2rk1/ppqn1ppp/2pbpn2/3p4/3P4/2PBPNB1/PP1N1PPP/R2Q1RK1 b - - 8 9");
+            auto white_indices = get_active_feature_indices_halfkp(board1, Color::WHITE);
+            auto black_indices = get_active_feature_indices_halfkp(board1, Color::BLACK);
+
+            std::cout << "White index count: " << white_indices.size() << '\n';
+            for (int index : white_indices)
+            {
+                std::cout << index << '\n';
+            }
+
+            std::cout << "Black index count: " << black_indices.size() << '\n';
+            for (int index : black_indices)
+            {
+                std::cout << index << '\n';
+            }   
+            flag = true;
+        }
+
+
         return evaluateMaterial(board);
     }
 
