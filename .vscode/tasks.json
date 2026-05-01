@@ -25,12 +25,9 @@
         "src/game_loop.cpp",
         "src/evaluation.cpp",
         "src/uci_interface.cpp",
-<<<<<<< Updated upstream
-=======
         "src/nnue/nnue_features.cpp",
         "src/nnue/pgn_training_bridge.cpp",
         "src/nnue/nnue_evaluator.cpp",
->>>>>>> Stashed changes
 
         "-I", "${workspaceFolder}/include",
         "-I", "${workspaceFolder}/chess-library-master/include",
