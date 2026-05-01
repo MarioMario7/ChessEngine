@@ -1,14 +1,18 @@
-#include "../include/move_provider.hpp"
     #include "../include/move_provider.hpp"
+    #include "../include/evaluation.hpp"
+    #include <random>
+    #include <cctype>
+    #include <iostream>
+    #include <chrono>
+    using U64 = std::uint64_t;
 
 
 
     int move_counter = 0;
     int extra_moves = 0;
 
-int q_depth = 0;        // current quiescence recursion depth
-int q_max_depth = 0;    // deepest quiescence level reached
     int q_depth = 0;        // current quiescence recursion depth
+    int q_max_depth = 0;    // deepest quiescence level reached
 
     const int CHECKMATE_SCORE = 999999;
     const int DRAW_SCORE = 0;
