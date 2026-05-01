@@ -54,7 +54,7 @@ int main() {
     // chess starting position
 
      Board board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-     board.setFen("1rkrrrrr/Q2prrrr/1rrrrrrr/1rrbrrrr/4rrrr/2b1rrrr/1r6/K7 w - - 24 12");
+    // board.setFen("r1b2rk1/ppqn1ppp/2pbpn2/3p4/3P4/2PBPNB1/PP1N1PPP/R2Q1RK1 b - - 8 9");
      std::cout << " FEN: " << board.getFen() << "\n\n";
      playGame(board);
 

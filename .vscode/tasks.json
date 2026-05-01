@@ -10,17 +10,11 @@
         "-Wall",
         "-Wextra",
 
-
-        // OPTIMIZATION FLAGS
-
         "-O3",
         "-march=native",
         "-mtune=native",
         "-flto",
         "-DNDEBUG",
-
-
-        // FORCE AVX2 / BMI / BMI2 -- may be needed later
 
         "-mavx2",
         "-mbmi",
@@ -31,6 +25,12 @@
         "src/game_loop.cpp",
         "src/evaluation.cpp",
         "src/uci_interface.cpp",
+<<<<<<< Updated upstream
+=======
+        "src/nnue/nnue_features.cpp",
+        "src/nnue/pgn_training_bridge.cpp",
+        "src/nnue/nnue_evaluator.cpp",
+>>>>>>> Stashed changes
 
         "-I", "${workspaceFolder}/include",
         "-I", "${workspaceFolder}/chess-library-master/include",
@@ -46,6 +46,43 @@
       },
       "problemMatcher": ["$gcc"],
       "detail": "Build using MinGW-w64 GCC (AVX2 Optimized)"
+    },
+    {
+      "label": "Build PGN Training DLL",
+      "type": "shell",
+      "command": "C:/msys64/mingw64/bin/g++.exe",
+      "args": [
+        "-std=c++17",
+        "-Wall",
+        "-Wextra",
+
+        "-O3",
+        "-march=native",
+        "-mtune=native",
+        "-DNDEBUG",
+
+        "-mavx2",
+        "-mbmi",
+        "-mbmi2",
+
+        "-shared",
+        "-static-libgcc",
+        "-static-libstdc++",
+
+        "src/nnue/nnue_features.cpp",
+        "src/nnue/pgn_training_bridge.cpp",
+
+        "-I", "${workspaceFolder}/include",
+        "-I", "${workspaceFolder}/chess-library-master/include",
+
+        "-o", "pgn_halfkp_training.dll"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": ["$gcc"],
+      "detail": "Build PGN HalfKP training DLL for Python ctypes"
     }
   ]
 }
